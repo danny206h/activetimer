@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interval Timer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111417;
+      --panel: #1a2025;
+      --panel-2: #222932;
+      --text: #f4f7f8;
+      --muted: #a8b3bc;
+      --line: #39434c;
+      --work: #42d392;
+      --rest: #5fb3ff;
+      --warn: #ffc857;
+      --stop: #ff6b6b;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 14% 8%, rgba(66, 211, 146, .18), transparent 28rem),
+        radial-gradient(circle at 86% 18%, rgba(95, 179, 255, .14), transparent 30rem),
+        linear-gradient(140deg, #111417, #171c21 46%, #12181c);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    main {
+      width: min(1060px, 100%);
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .settings,
+    .timer {
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .settings {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3vw, 2rem);
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .sound-toggle {
+      min-width: 104px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      text-align: center;
+      font-size: .8rem;
+      min-height: 36px;
+    }
+
+    .sound-toggle[aria-pressed="false"] {
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: .92rem;
+      font-weight: 650;
+    }
+
+    .duration-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .input-shell {
+      position: relative;
+    }
+
+    input {
+      width: 100%;
+      min-height: 48px;
+      appearance: textfield;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 12px 46px 12px 13px;
+      font: inherit;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: color-mix(in srgb, var(--rest) 68%, var(--line));
+      box-shadow: 0 0 0 3px rgba(95, 179, 255, .15);
+    }
+
+    input:disabled {
+      opacity: .65;
+    }
+
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      margin: 0;
+    }
+
+    .unit {
+      position: absolute;
+      right: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: .82rem;
+      pointer-events: none;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    button {
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+      color: var(--text);
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--rest) 55%, var(--line));
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .primary {
+      border-color: color-mix(in srgb, var(--work) 68%, var(--line));
+      background: linear-gradient(180deg, color-mix(in srgb, var(--work) 28%, var(--panel-2)), var(--panel-2));
+    }
+
+    .danger {
+      border-color: color-mix(in srgb, var(--stop) 62%, var(--line));
+    }
+
+    .timer {
+      min-height: 560px;
+      padding: clamp(22px, 5vw, 40px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 20px;
+      overflow: hidden;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .phase-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--text);
+      font-weight: 800;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--work);
+      box-shadow: 0 0 22px currentColor;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: .95rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .display {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      gap: 10px;
+    }
+
+    .time {
+      margin: 0;
+      font-size: clamp(5.2rem, 18vw, 12.4rem);
+      line-height: .9;
+      font-weight: 850;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+      text-wrap: nowrap;
+    }
+
+    .cue {
+      min-height: 1.6em;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 2.8vw, 1.45rem);
+      font-weight: 650;
+    }
+
+    .progress {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar {
+      height: 13px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--work), var(--rest));
+      transition: width .2s linear;
+    }
+
+    .rounds {
+      display: grid;
+      grid-template-columns: repeat(var(--round-count, 8), minmax(10px, 1fr));
+      gap: 6px;
+    }
+
+    .round-dot {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+    }
+
+    .round-dot.done {
+      background: var(--work);
+      border-color: transparent;
+    }
+
+    .round-dot.active {
+      background: var(--warn);
+      border-color: transparent;
+    }
+
+    .rest-mode .dot {
+      background: var(--rest);
+    }
+
+    .rest-mode .fill {
+      background: linear-gradient(90deg, var(--rest), #b18cff);
+    }
+
+    .warning .time {
+      color: var(--warn);
+    }
+
+    .finished .time {
+      color: var(--work);
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 14px;
+        place-items: start center;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .timer {
+        min-height: 450px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .duration-row,
+      .buttons {
+        grid-template-columns: 1fr;
+      }
+
+      .time {
+        font-size: clamp(4.6rem, 25vw, 6rem);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="settings" aria-label="Timer settings">
+      <div class="brand">
+        <h1>Interval Timer</h1>
+        <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true">Sound on</button>
+      </div>
+
+      <div class="field">
+        <label>Work duration</label>
+        <div class="duration-row">
+          <div class="input-shell">
+            <input id="workMin" type="number" min="0" max="999" value="0" inputmode="numeric" aria-label="Work minutes">
+            <span class="unit">min</span>
+          </div>
+          <div class="input-shell">
+            <input id="workSec" type="number" min="0" max="59" value="45" inputmode="numeric" aria-label="Work seconds">
+            <span class="unit">sec</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Rest duration</label>
+        <div class="duration-row">
+          <div class="input-shell">
+            <input id="restMin" type="number" min="0" max="999" value="0" inputmode="numeric" aria-label="Rest minutes">
+            <span class="unit">min</span>
+          </div>
+          <div class="input-shell">
+            <input id="restSec" type="number" min="0" max="59" value="15" inputmode="numeric" aria-label="Rest seconds">
+            <span class="unit">sec</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="rounds">Number of rounds</label>
+        <div class="input-shell">
+          <input id="rounds" type="number" min="1" max="99" value="8" inputmode="numeric">
+          <span class="unit">rounds</span>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="primary" id="startPause" type="button">Start</button>
+        <button class="danger" id="reset" type="button">Reset</button>
+      </div>
+    </section>
+
+    <section class="timer" id="timerPanel" aria-live="polite">
+      <div class="status-row">
+        <div class="phase-pill">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="phase">Ready</span>
+        </div>
+        <div class="meta" id="roundMeta">Round 1 of 8</div>
+      </div>
+
+      <div class="display">
+        <p class="time" id="time">00:45</p>
+        <div class="cue" id="cue">Set your intervals, then start.</div>
+      </div>
+
+      <div class="progress">
+        <div class="bar" aria-label="Current interval progress">
+          <div class="fill" id="fill"></div>
+        </div>
+        <div class="rounds" id="roundDots" aria-label="Round progress"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const els = {
+      workMin: document.getElementById('workMin'),
+      workSec: document.getElementById('workSec'),
+      restMin: document.getElementById('restMin'),
+      restSec: document.getElementById('restSec'),
+      rounds: document.getElementById('rounds'),
+      startPause: document.getElementById('startPause'),
+      reset: document.getElementById('reset'),
+      timerPanel: document.getElementById('timerPanel'),
+      phase: document.getElementById('phase'),
+      roundMeta: document.getElementById('roundMeta'),
+      time: document.getElementById('time'),
+      cue: document.getElementById('cue'),
+      fill: document.getElementById('fill'),
+      roundDots: document.getElementById('roundDots'),
+      soundToggle: document.getElementById('soundToggle')
+    };
+
+    const inputs = [els.workMin, els.workSec, els.restMin, els.restSec, els.rounds];
+    const state = {
+      running: false,
+      finished: false,
+      phase: 'warmup',
+      round: 1,
+      remaining: 10,
+      intervalTotal: 10,
+      lastWholeSecond: null,
+      deadline: 0,
+      raf: 0,
+      audio: null,
+      soundEnabled: true,
+      activeAudioNodes: []
+    };
+
+    const WARMUP_SECONDS = 10;
+
+    function numberValue(input, fallback) {
+      const value = Number.parseInt(input.value, 10);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function clampInputs() {
+      els.workMin.value = Math.min(999, Math.max(0, numberValue(els.workMin, 0)));
+      els.workSec.value = Math.min(59, Math.max(0, numberValue(els.workSec, 0)));
+      els.restMin.value = Math.min(999, Math.max(0, numberValue(els.restMin, 0)));
+      els.restSec.value = Math.min(59, Math.max(0, numberValue(els.restSec, 0)));
+      els.rounds.value = Math.min(99, Math.max(1, numberValue(els.rounds, 1)));
+    }
+
+    function settings() {
+      clampInputs();
+      const work = numberValue(els.workMin, 0) * 60 + numberValue(els.workSec, 0);
+      const rest = numberValue(els.restMin, 0) * 60 + numberValue(els.restSec, 0);
+      return {
+        work: Math.max(1, work),
+        rest: Math.max(0, rest),
+        rounds: numberValue(els.rounds, 1)
+      };
+    }
+
+    function format(seconds) {
+      const safe = Math.max(0, Math.ceil(seconds));
+      const minutes = Math.floor(safe / 60);
+      const secs = safe % 60;
+      return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function ensureAudio() {
+      if (!state.audio) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        state.audio = AudioContext ? new AudioContext() : null;
+      }
+      if (state.audio && state.audio.state === 'suspended') {
+        state.audio.resume();
+      }
+      return state.audio;
+    }
+
+    function trackAudioNode(node) {
+      state.activeAudioNodes.push(node);
+      node.addEventListener('ended', () => {
+        state.activeAudioNodes = state.activeAudioNodes.filter(item => item !== node);
+      }, { once: true });
+    }
+
+    function stopActiveSounds() {
+      state.activeAudioNodes.forEach(node => {
+        try {
+          node.stop(0);
+        } catch (error) {
+          // Already stopped nodes are harmless.
+        }
+      });
+      state.activeAudioNodes = [];
+    }
+
+    function setSoundToggle() {
+      els.soundToggle.textContent = state.soundEnabled ? 'Sound on' : 'Sound off';
+      els.soundToggle.setAttribute('aria-pressed', String(state.soundEnabled));
+    }
+
+    function tone(freq, start, duration, gainValue = 0.09, type = 'sine', endFreq = freq) {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), start + duration);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(gain).connect(ctx.destination);
+      trackAudioNode(osc);
+      osc.start(start);
+      osc.stop(start + duration + 0.025);
+    }
+
+    function bell(start, base = 880) {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const partials = [
+        { ratio: 1, gain: 0.072, duration: 1.18 },
+        { ratio: 2.01, gain: 0.038, duration: 0.78 },
+        { ratio: 2.72, gain: 0.026, duration: 0.48 },
+        { ratio: 3.92, gain: 0.015, duration: 0.32 }
+      ];
+      partials.forEach(partial => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(base * partial.ratio, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(partial.gain, start + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + partial.duration);
+        osc.connect(gain).connect(ctx.destination);
+        trackAudioNode(osc);
+        osc.start(start);
+        osc.stop(start + partial.duration + 0.04);
+      });
+    }
+
+    function horn(start) {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const master = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      const vibrato = ctx.createOscillator();
+      const vibratoDepth = ctx.createGain();
+
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(430, start);
+      filter.frequency.linearRampToValueAtTime(520, start + 0.16);
+      filter.frequency.setValueAtTime(500, start + 0.74);
+      filter.Q.value = 5.5;
+      master.gain.setValueAtTime(0.0001, start);
+      master.gain.exponentialRampToValueAtTime(0.13, start + 0.08);
+      master.gain.setValueAtTime(0.13, start + 0.58);
+      master.gain.exponentialRampToValueAtTime(0.0001, start + 0.94);
+      filter.connect(master).connect(ctx.destination);
+      vibrato.frequency.value = 5.2;
+      vibratoDepth.gain.value = 2.8;
+      trackAudioNode(vibrato);
+      vibrato.start(start);
+      vibrato.stop(start + 0.96);
+
+      [
+        { freq: 196, detune: -9, gain: 0.88 },
+        { freq: 196, detune: 7, gain: 0.72 },
+        { freq: 293.66, detune: -5, gain: 0.52 },
+        { freq: 392, detune: 4, gain: 0.34 }
+      ].forEach(partial => {
+        const osc = ctx.createOscillator();
+        const voiceGain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(partial.freq * 0.97, start);
+        osc.frequency.linearRampToValueAtTime(partial.freq, start + 0.09);
+        osc.detune.value = partial.detune;
+        voiceGain.gain.value = partial.gain;
+        vibrato.connect(vibratoDepth).connect(osc.detune);
+        osc.connect(voiceGain).connect(filter);
+        trackAudioNode(osc);
+        osc.start(start);
+        osc.stop(start + 0.96);
+      });
+    }
+
+    function countdownCue(start) {
+      noiseHit(start, 0.035, 0.026, 2400);
+      tone(1046.5, start, 0.075, 0.055, 'triangle', 1318.51);
+      tone(2093, start, 0.045, 0.018, 'sine', 1760);
+    }
+
+    function finishCelebration(start) {
+      horn(start);
+      horn(start + 0.86);
+      tone(523.25, start + 1.82, 0.12, 0.055, 'triangle', 659.25);
+      tone(659.25, start + 1.96, 0.12, 0.06, 'triangle', 783.99);
+      tone(1046.5, start + 2.1, 0.34, 0.07, 'sine', 1318.51);
+      bell(start + 2.08, 1318.51);
+    }
+
+    function noiseHit(start, duration, gainValue = 0.035, frequency = 1800) {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const samples = Math.max(1, Math.floor(ctx.sampleRate * duration));
+      const buffer = ctx.createBuffer(1, samples, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let index = 0; index < samples; index += 1) {
+        data[index] = (Math.random() * 2 - 1) * (1 - index / samples);
+      }
+
+      const source = ctx.createBufferSource();
+      const filter = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+      filter.type = 'bandpass';
+      filter.frequency.value = frequency;
+      filter.Q.value = 8;
+      gain.gain.setValueAtTime(gainValue, start);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      source.buffer = buffer;
+      source.connect(filter).connect(gain).connect(ctx.destination);
+      trackAudioNode(source);
+      source.start(start);
+      source.stop(start + duration);
+    }
+
+    function playWarmupTune(secondsToPlay = WARMUP_SECONDS) {
+      if (!state.soundEnabled) return;
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const now = ctx.currentTime + 0.025;
+      const notes = [
+        659.25, 783.99, 987.77, 783.99,
+        659.25, 880, 1046.5, 880,
+        698.46, 880, 1174.66, 1046.5,
+        783.99, 987.77, 1318.51, 1567.98
+      ];
+      const step = 0.18;
+      const maxNotes = Math.floor(Math.max(0, secondsToPlay - 3.15) / step);
+      for (let index = 0; index < maxNotes; index += 1) {
+        const at = now + index * step;
+        const freq = notes[index % notes.length];
+        const beat = index % 8;
+        tone(freq, at, beat === 7 ? 0.15 : 0.105, 0.04, 'square', freq);
+        if (beat === 0 || beat === 4) {
+          tone(freq / 2, at, 0.11, 0.018, 'triangle', freq / 2);
+        }
+      }
+    }
+
+    function playSound(kind) {
+      if (!state.soundEnabled) return;
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const now = ctx.currentTime + 0.015;
+      if (kind === 'countdown') {
+        countdownCue(now);
+      } else if (kind === 'begin') {
+        bell(now, 880);
+      } else if (kind === 'stop') {
+        noiseHit(now, 0.055, 0.03, 900);
+        tone(329.63, now, 0.11, 0.055, 'square', 261.63);
+        tone(196, now + 0.105, 0.18, 0.05, 'triangle', 146.83);
+      } else if (kind === 'repComplete') {
+        horn(now);
+      } else if (kind === 'final') {
+        finishCelebration(now);
+      } else if (kind === 'warmup') {
+        playWarmupTune(state.remaining);
+      }
+    }
+
+    function setInputsDisabled(disabled) {
+      inputs.forEach(input => input.disabled = disabled);
+    }
+
+    function renderRoundDots(total) {
+      els.roundDots.style.setProperty('--round-count', Math.min(total, 12));
+      els.roundDots.innerHTML = '';
+      for (let index = 1; index <= total; index += 1) {
+        const dot = document.createElement('div');
+        dot.className = 'round-dot';
+        if (state.finished || index < state.round) dot.classList.add('done');
+        if (!state.finished && state.phase !== 'warmup' && index === state.round) dot.classList.add('active');
+        els.roundDots.appendChild(dot);
+      }
+    }
+
+    function render() {
+      const cfg = settings();
+      const phaseName = state.finished ? 'Complete' : state.phase === 'warmup' ? 'Warm up' : state.phase === 'work' ? 'Work' : 'Rest';
+      els.timerPanel.classList.toggle('rest-mode', state.phase === 'rest' && !state.finished);
+      els.timerPanel.classList.toggle('warning', state.running && state.remaining <= 5 && state.remaining > 0);
+      els.timerPanel.classList.toggle('finished', state.finished);
+      els.phase.textContent = phaseName;
+      els.roundMeta.textContent = state.finished ? `${cfg.rounds} rounds complete` : state.phase === 'warmup' ? `Warm up, then ${cfg.rounds} rounds` : `Round ${state.round} of ${cfg.rounds}`;
+      els.time.textContent = state.finished ? '00:00' : format(state.remaining);
+      els.cue.textContent = cueText();
+      const elapsed = Math.max(0, state.intervalTotal - state.remaining);
+      const pct = state.intervalTotal > 0 ? Math.min(100, Math.max(0, (elapsed / state.intervalTotal) * 100)) : 0;
+      els.fill.style.width = `${pct}%`;
+      els.startPause.textContent = state.running ? 'Pause' : state.finished ? 'Start over' : 'Start';
+      renderRoundDots(cfg.rounds);
+    }
+
+    function cueText() {
+      if (state.finished) return 'Workout complete.';
+      if (!state.running && state.remaining === state.intervalTotal && state.round === 1) return 'Set your intervals, then start.';
+      if (!state.running) return 'Paused.';
+      if (state.phase === 'warmup' && state.remaining <= 3 && state.remaining > 0) return `${Math.ceil(state.remaining)}`;
+      if (state.phase === 'warmup') return 'Get ready.';
+      if (state.remaining <= 5 && state.remaining > 0) return `${Math.ceil(state.remaining)} second${Math.ceil(state.remaining) === 1 ? '' : 's'}`;
+      return state.phase === 'work' ? 'Move.' : 'Recover.';
+    }
+
+    function loadInitialFromSettings() {
+      settings();
+      state.phase = 'warmup';
+      state.round = 1;
+      state.remaining = WARMUP_SECONDS;
+      state.intervalTotal = WARMUP_SECONDS;
+      state.lastWholeSecond = Math.ceil(state.remaining);
+      state.finished = false;
+      render();
+    }
+
+    function start() {
+      const cfg = settings();
+      if (state.finished) {
+        loadInitialFromSettings();
+      }
+      if (state.remaining <= 0) {
+        state.phase = 'warmup';
+        state.round = 1;
+        state.remaining = WARMUP_SECONDS;
+        state.intervalTotal = WARMUP_SECONDS;
+      }
+      if (state.soundEnabled) ensureAudio();
+      playSound(state.phase === 'warmup' ? 'warmup' : 'begin');
+      state.running = true;
+      state.finished = false;
+      state.deadline = performance.now() + state.remaining * 1000;
+      state.lastWholeSecond = Math.ceil(state.remaining);
+      setInputsDisabled(true);
+      tick();
+      render();
+    }
+
+    function pause() {
+      state.running = false;
+      cancelAnimationFrame(state.raf);
+      stopActiveSounds();
+      playSound('stop');
+      setInputsDisabled(false);
+      render();
+    }
+
+    function reset() {
+      state.running = false;
+      cancelAnimationFrame(state.raf);
+      stopActiveSounds();
+      playSound(state.finished ? 'final' : 'stop');
+      setInputsDisabled(false);
+      loadInitialFromSettings();
+    }
+
+    function completeWorkout(playFinal = true) {
+      state.running = false;
+      state.finished = true;
+      state.remaining = 0;
+      cancelAnimationFrame(state.raf);
+      setInputsDisabled(false);
+      if (playFinal) playSound('final');
+      render();
+    }
+
+    function nextInterval() {
+      const cfg = settings();
+      if (state.phase === 'warmup') {
+        state.phase = 'work';
+        state.remaining = cfg.work;
+        state.intervalTotal = cfg.work;
+        playSound('begin');
+      } else if (state.phase === 'work' && cfg.rest > 0) {
+        state.phase = 'rest';
+        state.remaining = cfg.rest;
+        state.intervalTotal = cfg.rest;
+        playSound('repComplete');
+        if (cfg.rest <= 5) {
+          const ctx = state.soundEnabled ? ensureAudio() : null;
+          if (ctx) countdownCue(ctx.currentTime + 0.96);
+        }
+      } else if (state.phase === 'work' && state.round < cfg.rounds) {
+        state.phase = 'work';
+        state.round += 1;
+        state.remaining = cfg.work;
+        state.intervalTotal = cfg.work;
+        playSound('repComplete');
+        const ctx = state.soundEnabled ? ensureAudio() : null;
+        if (ctx) bell(ctx.currentTime + 1.02, 880);
+      } else if (state.phase === 'work') {
+        playSound('repComplete');
+        const ctx = state.soundEnabled ? ensureAudio() : null;
+        if (ctx) {
+          setTimeout(() => {
+            if (state.finished) playSound('final');
+          }, 1080);
+        }
+        completeWorkout(false);
+        return;
+      } else if (state.round < cfg.rounds) {
+        state.phase = 'work';
+        state.round += 1;
+        state.remaining = cfg.work;
+        state.intervalTotal = cfg.work;
+        playSound('begin');
+      } else {
+        completeWorkout();
+        return;
+      }
+      state.deadline = performance.now() + state.remaining * 1000;
+      state.lastWholeSecond = Math.ceil(state.remaining);
+      render();
+      tick();
+    }
+
+    function tick() {
+      if (!state.running) return;
+      const msLeft = state.deadline - performance.now();
+      state.remaining = Math.max(0, msLeft / 1000);
+      const whole = Math.ceil(state.remaining);
+      if (whole !== state.lastWholeSecond) {
+        state.lastWholeSecond = whole;
+        if (state.phase === 'warmup' && whole > 0 && whole <= 3) playSound('countdown');
+        if (state.phase !== 'warmup' && whole > 0 && whole <= 5) playSound('countdown');
+      }
+      render();
+      if (state.remaining <= 0) {
+        nextInterval();
+      } else {
+        state.raf = requestAnimationFrame(tick);
+      }
+    }
+
+    inputs.forEach(input => {
+      input.addEventListener('change', loadInitialFromSettings);
+      input.addEventListener('input', () => {
+        if (!state.running) loadInitialFromSettings();
+      });
+    });
+
+    els.startPause.addEventListener('click', () => {
+      if (state.running) pause();
+      else start();
+    });
+
+    els.reset.addEventListener('click', reset);
+    els.soundToggle.addEventListener('click', () => {
+      state.soundEnabled = !state.soundEnabled;
+      setSoundToggle();
+      if (!state.soundEnabled) stopActiveSounds();
+      if (state.soundEnabled) {
+        ensureAudio();
+        bell((state.audio ? state.audio.currentTime : 0) + 0.015, 660);
+      }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && state.running) tick();
+    });
+
+    setSoundToggle();
+    loadInitialFromSettings();
+  </script>
+</body>
+</html>
