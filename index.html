@@ -625,6 +625,11 @@
       });
     }
 
+    function doubleBell(start, base = 880) {
+      bell(start, base);
+      bell(start + 0.34, base * 1.18);
+    }
+
     function horn(start) {
       const ctx = ensureAudio();
       if (!ctx) return;
@@ -759,7 +764,7 @@
       if (kind === 'countdown') {
         countdownCue(now);
       } else if (kind === 'begin') {
-        bell(now, 880);
+        doubleBell(now, 880);
       } else if (kind === 'stop') {
         noiseHit(now, 0.055, 0.03, 900);
         tone(329.63, now, 0.11, 0.055, 'square', 261.63);
@@ -906,7 +911,7 @@
         state.intervalTotal = cfg.work;
         playSound('repComplete');
         const ctx = state.soundEnabled ? ensureAudio() : null;
-        if (ctx) bell(ctx.currentTime + 1.02, 880);
+        if (ctx) doubleBell(ctx.currentTime + 1.02, 880);
       } else if (state.round < cfg.rounds) {
         state.phase = 'work';
         state.round += 1;
