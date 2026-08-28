@@ -14,7 +14,7 @@
       --muted: #a8b3bc;
       --line: #39434c;
       --work: #42d392;
-      --rest: #5fb3ff;
+      --rest: #ff9f1c;
       --warn: #ffc857;
       --stop: #ff6b6b;
       --shadow: 0 18px 50px rgba(0, 0, 0, .28);
@@ -133,6 +133,20 @@
       font-weight: 650;
     }
 
+    .field-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .field-value {
+      color: var(--text);
+      font-size: .9rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
     .duration-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -159,7 +173,7 @@
 
     input:focus {
       border-color: color-mix(in srgb, var(--rest) 68%, var(--line));
-      box-shadow: 0 0 0 3px rgba(95, 179, 255, .15);
+      box-shadow: 0 0 0 3px rgba(255, 159, 28, .15);
     }
 
     input:disabled {
@@ -169,6 +183,53 @@
     input::-webkit-outer-spin-button,
     input::-webkit-inner-spin-button {
       margin: 0;
+    }
+
+    input[type="range"] {
+      min-height: 34px;
+      padding: 0;
+      appearance: none;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+
+    input[type="range"]:focus {
+      box-shadow: none;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: linear-gradient(90deg, var(--work), var(--warn), var(--stop));
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 24px;
+      height: 24px;
+      margin-top: -8px;
+      appearance: none;
+      border-radius: 50%;
+      border: 2px solid var(--text);
+      background: var(--panel-2);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: linear-gradient(90deg, var(--work), var(--warn), var(--stop));
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--text);
+      background: var(--panel-2);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
     }
 
     .unit {
@@ -340,7 +401,7 @@
     }
 
     .rest-mode .fill {
-      background: linear-gradient(90deg, var(--rest), #b18cff);
+      background: linear-gradient(90deg, var(--rest), #ffd166);
     }
 
     .warning .time {
@@ -452,6 +513,14 @@
         </div>
       </div>
 
+      <div class="field">
+        <div class="field-heading">
+          <label for="volume">Volume</label>
+          <span class="field-value" id="volumeValue">100%</span>
+        </div>
+        <input id="volume" type="range" min="25" max="300" step="5" value="100" aria-label="Sound volume">
+      </div>
+
       <div class="buttons">
         <button class="primary" id="startPause" type="button">Start</button>
         <button class="danger" id="reset" type="button">Reset</button>
@@ -498,7 +567,9 @@
       cue: document.getElementById('cue'),
       fill: document.getElementById('fill'),
       roundDots: document.getElementById('roundDots'),
-      soundToggle: document.getElementById('soundToggle')
+      soundToggle: document.getElementById('soundToggle'),
+      volume: document.getElementById('volume'),
+      volumeValue: document.getElementById('volumeValue')
     };
 
     const inputs = [els.workMin, els.workSec, els.restMin, els.restSec, els.rounds];
@@ -514,6 +585,7 @@
       raf: 0,
       audio: null,
       soundEnabled: true,
+      volume: 1,
       activeAudioNodes: []
     };
 
@@ -588,6 +660,17 @@
       els.soundToggle.setAttribute('aria-pressed', String(state.soundEnabled));
     }
 
+    function setVolume() {
+      const percent = Math.min(300, Math.max(25, numberValue(els.volume, 100)));
+      els.volume.value = percent;
+      state.volume = percent / 100;
+      els.volumeValue.textContent = `${percent}%`;
+    }
+
+    function soundLevel(value) {
+      return value * state.volume;
+    }
+
     function tone(freq, start, duration, gainValue = 0.09, type = 'sine', endFreq = freq) {
       const ctx = ensureAudio();
       if (!ctx) return;
@@ -597,7 +680,7 @@
       osc.frequency.setValueAtTime(freq, start);
       osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), start + duration);
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(soundLevel(gainValue), start + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
       osc.connect(gain).connect(ctx.destination);
       trackAudioNode(osc);
@@ -620,7 +703,7 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(base * partial.ratio, start);
         gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(partial.gain, start + 0.008);
+        gain.gain.exponentialRampToValueAtTime(soundLevel(partial.gain), start + 0.008);
         gain.gain.exponentialRampToValueAtTime(0.0001, start + partial.duration);
         osc.connect(gain).connect(ctx.destination);
         trackAudioNode(osc);
@@ -634,49 +717,35 @@
       bell(start + 0.34, base * 1.18);
     }
 
-    function horn(start) {
+    function loudBell(start, base = 1244.51) {
       const ctx = ensureAudio();
       if (!ctx) return;
-      const master = ctx.createGain();
-      const filter = ctx.createBiquadFilter();
-      const vibrato = ctx.createOscillator();
-      const vibratoDepth = ctx.createGain();
-
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(430, start);
-      filter.frequency.linearRampToValueAtTime(520, start + 0.16);
-      filter.frequency.setValueAtTime(500, start + 0.74);
-      filter.Q.value = 5.5;
-      master.gain.setValueAtTime(0.0001, start);
-      master.gain.exponentialRampToValueAtTime(0.13, start + 0.08);
-      master.gain.setValueAtTime(0.13, start + 0.58);
-      master.gain.exponentialRampToValueAtTime(0.0001, start + 0.94);
-      filter.connect(master).connect(ctx.destination);
-      vibrato.frequency.value = 5.2;
-      vibratoDepth.gain.value = 2.8;
-      trackAudioNode(vibrato);
-      vibrato.start(start);
-      vibrato.stop(start + 0.96);
-
+      noiseHit(start, 0.028, 0.065, 3600);
       [
-        { freq: 196, detune: -9, gain: 0.88 },
-        { freq: 196, detune: 7, gain: 0.72 },
-        { freq: 293.66, detune: -5, gain: 0.52 },
-        { freq: 392, detune: 4, gain: 0.34 }
+        { ratio: 1, gain: 0.15, duration: 0.62, type: 'triangle' },
+        { ratio: 1.5, gain: 0.08, duration: 0.48, type: 'square' },
+        { ratio: 2.02, gain: 0.065, duration: 0.36, type: 'sine' },
+        { ratio: 2.76, gain: 0.045, duration: 0.26, type: 'sine' }
       ].forEach(partial => {
         const osc = ctx.createOscillator();
-        const voiceGain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(partial.freq * 0.97, start);
-        osc.frequency.linearRampToValueAtTime(partial.freq, start + 0.09);
-        osc.detune.value = partial.detune;
-        voiceGain.gain.value = partial.gain;
-        vibrato.connect(vibratoDepth).connect(osc.detune);
-        osc.connect(voiceGain).connect(filter);
+        const gain = ctx.createGain();
+        osc.type = partial.type;
+        osc.frequency.setValueAtTime(base * partial.ratio, start);
+        osc.frequency.exponentialRampToValueAtTime(base * partial.ratio * 0.994, start + partial.duration);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(soundLevel(partial.gain), start + 0.006);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + partial.duration);
+        osc.connect(gain).connect(ctx.destination);
         trackAudioNode(osc);
         osc.start(start);
-        osc.stop(start + 0.96);
+        osc.stop(start + partial.duration + 0.035);
       });
+    }
+
+    function loudBellSequence(start, rings = 4) {
+      for (let index = 0; index < rings; index += 1) {
+        loudBell(start + index * 0.46, index % 2 === 0 ? 1244.51 : 1396.91);
+      }
     }
 
     function countdownCue(start) {
@@ -685,16 +754,41 @@
       tone(2093, start, 0.045, 0.018, 'sine', 1760);
     }
 
+    function victoryDance(start) {
+      const melody = [
+        { freq: 783.99, beat: 0 },
+        { freq: 987.77, beat: 1 },
+        { freq: 1174.66, beat: 2 },
+        { freq: 1318.51, beat: 3 },
+        { freq: 1174.66, beat: 4 },
+        { freq: 987.77, beat: 5 },
+        { freq: 1318.51, beat: 6 },
+        { freq: 1567.98, beat: 7 },
+        { freq: 1318.51, beat: 8 },
+        { freq: 1567.98, beat: 9 },
+        { freq: 1760, beat: 10 },
+        { freq: 2093, beat: 12 }
+      ];
+      const step = 0.16;
+      melody.forEach(note => {
+        const at = start + note.beat * step;
+        tone(note.freq, at, note.beat === 12 ? 0.48 : 0.115, 0.082, 'square', note.freq * 1.01);
+        tone(note.freq / 2, at, 0.13, 0.028, 'triangle', note.freq / 2);
+      });
+
+      for (let beat = 0; beat <= 12; beat += 2) {
+        noiseHit(start + beat * step, 0.03, 0.032, 1800);
+      }
+      for (let beat = 1; beat <= 11; beat += 2) {
+        noiseHit(start + beat * step, 0.022, 0.022, 4200);
+      }
+      bell(start + 2.18, 1567.98);
+    }
+
     function finishCelebration(start) {
-      horn(start);
-      horn(start + 0.92);
-      horn(start + 1.84);
-      tone(523.25, start + 2.68, 0.13, 0.055, 'triangle', 659.25);
-      tone(659.25, start + 2.83, 0.13, 0.06, 'triangle', 783.99);
-      tone(783.99, start + 2.98, 0.13, 0.065, 'triangle', 987.77);
-      tone(1046.5, start + 3.15, 0.48, 0.08, 'sine', 1318.51);
-      bell(start + 3.12, 1318.51);
-      applause(start + 3.45, 2.2);
+      loudBellSequence(start, 4);
+      victoryDance(start + 2.08);
+      applause(start + 4.55, 2.35);
     }
 
     function noiseHit(start, duration, gainValue = 0.035, frequency = 1800) {
@@ -713,7 +807,7 @@
       filter.type = 'bandpass';
       filter.frequency.value = frequency;
       filter.Q.value = 8;
-      gain.gain.setValueAtTime(gainValue, start);
+      gain.gain.setValueAtTime(soundLevel(gainValue), start);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
       source.buffer = buffer;
       source.connect(filter).connect(gain).connect(ctx.destination);
@@ -774,7 +868,7 @@
         tone(329.63, now, 0.11, 0.055, 'square', 261.63);
         tone(196, now + 0.105, 0.18, 0.05, 'triangle', 146.83);
       } else if (kind === 'repComplete') {
-        horn(now);
+        loudBellSequence(now, 4);
       } else if (kind === 'final') {
         finishCelebration(now);
       } else if (kind === 'warmup') {
@@ -968,6 +1062,7 @@
     });
 
     els.reset.addEventListener('click', reset);
+    els.volume.addEventListener('input', setVolume);
     els.soundToggle.addEventListener('click', () => {
       state.soundEnabled = !state.soundEnabled;
       setSoundToggle();
@@ -983,6 +1078,7 @@
     });
 
     setSoundToggle();
+    setVolume();
     loadInitialFromSettings();
   </script>
 </body>

@@ -10,10 +10,11 @@ A single-page workout interval timer with configurable work duration, rest durat
 - Large phase-colored countdown display
 - Work/rest round tracking
 - Sound on/off toggle
+- Volume slider up to 300%
 - Countdown cues for the final seconds of work and recovery
 - Bell cue for round start
-- Horn cue when each non-final work rep ends
-- Final workout-complete theme with longer horns and synthesized applause
+- Loud four-ring bell cue when each non-final work rep ends
+- Final workout-complete theme with loud bells, a short victory dance, and synthesized applause
 - Final work round skips recovery and goes straight to complete
 
 Open `index.html` in a browser to use it.
