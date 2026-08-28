@@ -14,7 +14,7 @@ A single-page workout interval timer with configurable work duration, rest durat
 - Countdown cues for the final seconds of work and recovery
 - Bell cue for round start
 - Loud four-ring bell cue when each non-final work rep ends
-- Final workout-complete theme with loud bells, a short victory dance, and synthesized applause
+- Final workout-complete theme with loud bells and an 8-bit platformer-style victory dance
 - Final work round skips recovery and goes straight to complete
 
 Open `index.html` in a browser to use it.

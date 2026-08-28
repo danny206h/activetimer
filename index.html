@@ -756,39 +756,42 @@
 
     function victoryDance(start) {
       const melody = [
-        { freq: 783.99, beat: 0 },
-        { freq: 987.77, beat: 1 },
-        { freq: 1174.66, beat: 2 },
+        { freq: 659.25, beat: 0 },
+        { freq: 783.99, beat: 1 },
+        { freq: 1046.5, beat: 2 },
         { freq: 1318.51, beat: 3 },
-        { freq: 1174.66, beat: 4 },
-        { freq: 987.77, beat: 5 },
+        { freq: 1567.98, beat: 5 },
         { freq: 1318.51, beat: 6 },
         { freq: 1567.98, beat: 7 },
-        { freq: 1318.51, beat: 8 },
-        { freq: 1567.98, beat: 9 },
-        { freq: 1760, beat: 10 },
-        { freq: 2093, beat: 12 }
+        { freq: 2093, beat: 8 },
+        { freq: 1567.98, beat: 10 },
+        { freq: 1975.53, beat: 11 },
+        { freq: 2349.32, beat: 12 },
+        { freq: 2637.02, beat: 14 }
       ];
-      const step = 0.16;
+      const step = 0.13;
       melody.forEach(note => {
         const at = start + note.beat * step;
-        tone(note.freq, at, note.beat === 12 ? 0.48 : 0.115, 0.082, 'square', note.freq * 1.01);
-        tone(note.freq / 2, at, 0.13, 0.028, 'triangle', note.freq / 2);
+        tone(note.freq, at, note.beat === 14 ? 0.52 : 0.095, 0.095, 'square', note.freq * 1.018);
+        tone(note.freq / 2, at, 0.105, 0.032, 'triangle', note.freq / 2);
       });
 
-      for (let beat = 0; beat <= 12; beat += 2) {
-        noiseHit(start + beat * step, 0.03, 0.032, 1800);
+      for (let beat = 0; beat <= 14; beat += 2) {
+        noiseHit(start + beat * step, 0.026, 0.034, 2200);
       }
-      for (let beat = 1; beat <= 11; beat += 2) {
-        noiseHit(start + beat * step, 0.022, 0.022, 4200);
+      for (let beat = 1; beat <= 13; beat += 2) {
+        noiseHit(start + beat * step, 0.018, 0.02, 5200);
       }
-      bell(start + 2.18, 1567.98);
+      tone(523.25, start, 0.11, 0.04, 'triangle', 523.25);
+      tone(392, start + step * 4, 0.11, 0.034, 'triangle', 392);
+      tone(523.25, start + step * 8, 0.11, 0.04, 'triangle', 523.25);
+      bell(start + 2.0, 1975.53);
+      bell(start + 2.18, 2637.02);
     }
 
     function finishCelebration(start) {
       loudBellSequence(start, 4);
       victoryDance(start + 2.08);
-      applause(start + 4.55, 2.35);
     }
 
     function noiseHit(start, duration, gainValue = 0.035, frequency = 1800) {
